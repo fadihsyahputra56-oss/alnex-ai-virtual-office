@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ALNEX AI Virtual Office</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
+  header { padding: 20px; background: #1e293b; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; color: #94a3b8; }
+  main { padding: 20px; max-width: 960px; margin: auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .card { background: #1e293b; border-radius: 12px; padding: 16px; }
+  .card h2 { margin: 0 0 6px; font-size: 13px; color: #94a3b8; text-transform: uppercase; }
+  .card .big { font-size: 26px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #334155; font-size: 14px; }
+  .warn { background: #451a03; border: 1px solid #92400e; border-radius: 10px; padding: 12px; margin: 16px 0; }
+  code { background: #0f172a; padding: 2px 6px; border-radius: 6px; }
+  input, button { padding: 8px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; }
+  button { background: #2563eb; border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ALNEX AI Virtual Office</h1>
+  <p>Owner: Fadil A.I. &middot; Toko: <a style="color:#93c5fd" href="https://lynk.id/alnex">https://lynk.id/alnex</a></p>
+</header>
+<main>
+  <div class="warn" id="statusBox">Memuat status integrasi&hellip;</div>
+  <div class="grid">
+    <div class="card"><h2>Omzet Terverifikasi</h2><div class="big" id="omzet">-</div></div>
+    <div class="card"><h2>Pesanan Terverifikasi</h2><div class="big" id="orders">-</div></div>
+    <div class="card"><h2>Pelanggan</h2><div class="big" id="customers">-</div></div>
+    <div class="card"><h2>Pesan Baru</h2><div class="big" id="messages">-</div></div>
+  </div>
+
+  <h2>Transaksi Terbaru</h2>
+  <div class="card"><table><thead><tr><th>Produk</th><th>Pembeli</th><th>Jumlah</th><th>Status</th></tr></thead><tbody id="txBody"><tr><td colspan="4">Memuat&hellip;</td></tr></tbody></table></div>
+
+  <h2>Tanya Agen AI</h2>
+  <div class="card">
+    <select id="agent">
+      <option value="manager">AI Manager</option>
+      <option value="sales">AI Sales</option>
+      <option value="marketing">AI Marketing</option>
+      <option value="finance">AI Finance</option>
+      <option value="cs">AI Customer Service</option>
+    </select>
+    <input id="q" size="40" placeholder="Contoh: berapa omzet saya?">
+    <button onclick="ask()">Tanya</button>
+    <p id="answer"></p>
+  </div>
+
+  <h2>Webhook</h2>
+  <div class="card">
+    <p>Lynk.id: <code>POST /webhook/lynk</code></p>
+    <p>WhatsApp: <code>GET /webhook/whatsapp</code> (verifikasi) dan <code>POST /webhook/whatsapp</code></p>
+    <p>URL lengkap baru ada setelah deploy ke Render, contoh format: <code>https://&lt;nama-service&gt;.onrender.com/webhook/lynk</code> — ganti <code>&lt;nama-service&gt;</code> dengan nama service Render Anda. Jangan menebak URL sebelum deploy berhasil.</p>
+  </div>
+</main>
+<script>
+async function load() {
+  try {
+    const r = await fetch('/api/dashboard');
+    const j = await r.json();
+    const d = j.data;
+    document.getElementById('omzet').textContent = 'Rp' + Number(d.omzet).toLocaleString('id-ID');
+    document.getElementById('orders').textContent = d.orders;
+    document.getElementById('customers').textContent = d.customers;
+    document.getElementById('messages').textContent = d.newMessages;
+    document.getElementById('statusBox').innerHTML = '<b>Status integrasi:</b> ' + d.integrations.map(i => i.name + ': ' + i.status).join(' &middot; ');
+    document.getElementById('txBody').innerHTML = d.recentTransactions.length
+      ? d.recentTransactions.map(t => `<tr><td>${t.productName}</td><td>${t.buyerName}</td><td>Rp${Number(t.amount).toLocaleString('id-ID')}</td><td>${t.status}</td></tr>`).join('')
+      : '<tr><td colspan="4">Belum ada transaksi. Data mulai kosong dan hanya terisi dari webhook / input Anda.</td></tr>';
+  } catch (e) {
+    document.getElementById('statusBox').textContent = 'Gagal memuat dashboard: ' + e.message;
+  }
+}
+async function ask() {
+  const agent = document.getElementById('agent').value;
+  const question = document.getElementById('q').value;
+  const r = await fetch('/api/agents/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent, question }) });
+  const j = await r.json();
+  document.getElementById('answer').textContent = j.data ? j.data.answer : 'Gagal menjawab.';
+}
+load();
+</script>
+</body>
+</html>
